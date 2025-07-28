@@ -1,26 +1,44 @@
 import streamlit as st
+from pptx import Presentation
 from PIL import Image
-import os
+from io import BytesIO
 
-st.title("🚦 Vehicle Traffic and Congestion at KPA Gates – Slide Viewer (Image Mode)")
+# Title
+st.title("📊 Vehicle Traffic and Congestion at KPA Gates – Slide Viewer")
 
-# Folder containing slide images
-SLIDES_FOLDER = "slides"
+# Load your uploaded PowerPoint file
+pptx_file = "OMARPPTX.pptx"
+prs = Presentation(pptx_file)
 
-# Get all image files
-image_files = sorted([
-    os.path.join(SLIDES_FOLDER, file)
-    for file in os.listdir(SLIDES_FOLDER)
-    if file.lower().endswith((".png", ".jpg", ".jpeg"))
-])
+# Slide selector
+slide_count = len(prs.slides)
+slide_num = st.slider("Select slide number", 1, slide_count, 1)
+slide = prs.slides[slide_num - 1]
 
-total_slides = len(image_files)
+st.subheader(f"Slide {slide_num} of {slide_count}")
 
-if total_slides == 0:
-    st.error("No slide images found in the 'slides/' folder.")
+# Extract and display text from the slide
+slide_text = ""
+for shape in slide.shapes:
+    if hasattr(shape, "text"):
+        slide_text += shape.text + "\n"
+
+if slide_text.strip():
+    st.markdown("### 📝 Slide Text Content")
+    st.text(slide_text.strip())
 else:
-    slide_num = st.slider("Select Slide Number", 1, total_slides, 1)
-    selected_image = image_files[slide_num - 1]
+    st.info("No text content found on this slide.")
 
-    st.header(f"📊 Slide {slide_num} of {total_slides}")
-    st.image(Image.open(selected_image), use_column_width=True)
+# Extract and display images (charts, visuals, etc.)
+has_image = False
+for shape in slide.shapes:
+    if shape.shape_type == 13:  # Picture type
+        image = shape.image
+        image_bytes = image.blob
+        img = Image.open(BytesIO(image_bytes))
+        st.markdown("### 🖼️ Slide Visual/Chart")
+        st.image(img, use_column_width=True)
+        has_image = True
+
+if not has_image:
+    st.warning("No image/chart found on this slide.")
